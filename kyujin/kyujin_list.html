@@ -92,21 +92,6 @@
   .controls select:focus { border-color: var(--gold); }
   .controls label { font-size: 13px; color: var(--gray3); white-space: nowrap; }
 
-  /* ── FILE LOAD ── */
-  .file-load {
-    padding: 10px 20px;
-    background: var(--gray1);
-    border-bottom: 1px solid var(--gray2);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    color: var(--gray3);
-    flex-wrap: wrap;
-  }
-  .file-load input[type="file"] { font-size: 13px; }
-  #file-status { font-weight: 600; color: var(--green); }
-
   /* ── TABLE WRAP ── */
   .table-wrap {
     overflow-x: auto;
@@ -289,19 +274,6 @@
   <div class="count-badge" id="header-count">読込中…</div>
 </header>
 
-  <div class="file-zone-wrap" id="fileZoneWrap">
-    <div class="file-zone">
-      <input class="file-path-input" id="filePath" type="text"
-        value="https://salty-soft.github.io/soohs.io/kyujin/kyujin.csv"
-        placeholder="CSVのURLまたはファイルパスを入力...">
-      <button class="btn btn-primary" onclick="loadFromPath()">再読込</button>
-      <label class="btn btn-secondary">
-        📂 ファイル選択
-        <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="loadFromFile(this)">
-      </label>
-    </div>
-  </div>
-
 <div class="controls">
   <label>🔍</label>
   <input type="text" id="search" placeholder="会社名・職種・住所などで絞り込み…">
@@ -324,7 +296,7 @@
 <div class="table-wrap">
   <div id="loading">
     <div class="spinner"></div>
-    <div>CSVファイルを選択してください</div>
+    <div>kyujin_test.csv を読み込み中…</div>
   </div>
   <div id="empty" style="display:none">該当する求人が見つかりませんでした。</div>
   <table id="table" style="display:none">
@@ -400,19 +372,28 @@
       });
   }
 
-  // ── ファイル読み込み ──
-  document.getElementById('csv-file').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      allData = parseCSV(ev.target.result);
-      document.getElementById('file-status').textContent = `✅ ${file.name}（${allData.length}件）`;
+  // ── CSV 自動読み込み（同ディレクトリの kyujin_test.csv）──
+  fetch('kyujin_test.csv')
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.arrayBuffer();
+    })
+    .then(buf => {
+      // UTF-8 / Shift_JIS 両対応
+      let text;
+      try {
+        text = new TextDecoder('utf-8', { fatal: true }).decode(buf);
+      } catch(e) {
+        text = new TextDecoder('shift_jis').decode(buf);
+      }
+      allData = parseCSV(text);
       initFilters();
       render();
-    };
-    reader.readAsText(file, 'UTF-8');
-  });
+    })
+    .catch(err => {
+      document.getElementById('loading').innerHTML =
+        `<div style="color:#c0392b;font-size:14px;">⚠️ kyujin_test.csv の読み込みに失敗しました。<br>HTMLと同じフォルダに CSV ファイルを置いてください。<br><small>${err}</small></div>`;
+    });
 
   // ── フィルター初期化 ──
   function initFilters() {
